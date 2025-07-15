@@ -1,9 +1,11 @@
 import json
 import logging
+import os
 
 import requests
 
 log = logging.getLogger(__name__)
+
 
 def get_existing_notion_movies(api_key: str, database_id: str) -> list:
     all_movies = []
@@ -14,7 +16,7 @@ def get_existing_notion_movies(api_key: str, database_id: str) -> list:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     body_json = {}
     response = None
@@ -24,7 +26,7 @@ def get_existing_notion_movies(api_key: str, database_id: str) -> list:
             response = requests.api.post(
                 f"https://api.notion.com/v1/databases/{database_id}/query",
                 headers=headers,
-                json=body_json
+                json=body_json,
             )
             response.raise_for_status()
 
@@ -32,9 +34,9 @@ def get_existing_notion_movies(api_key: str, database_id: str) -> list:
 
             # For every result, get the movie name
             for result in formatted_response["results"]:
-                if not result.get('properties', {}).get('Name', {}).get('title'):
+                if not result.get("properties", {}).get("Name", {}).get("title"):
                     continue
-                movie_title = result['properties']['Name']['title'][0]['plain_text']
+                movie_title = result["properties"]["Name"]["title"][0]["plain_text"]
                 logging.debug(f"  Found movie: {movie_title}")
                 all_movies.append(movie_title)
 
@@ -58,13 +60,13 @@ def put_movie_into_notion(json_data: dict, api_key: str):
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     try:
         response = requests.post(
             "https://api.notion.com/v1/pages",
             headers=headers,
-            data=json.dumps(json_data, ensure_ascii=False, indent=4)
+            data=json.dumps(json_data, ensure_ascii=False, indent=4),
         )
         response.raise_for_status()
         logging.info("Movie successfully added to Notion.")
@@ -78,6 +80,30 @@ def put_movie_into_notion(json_data: dict, api_key: str):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    _ = get_existing_notion_movies(, )
+    api_key = os.getenv("NOTION_API_KEY")
+    database_id = os.getenv("NOTION_DATABASE_ID")
 
-    _ = put_movie_into_notion()
+    if not api_key or not database_id:
+        logging.error(
+            "Please set the NOTION_API_KEY and NOTION_DATABASE_ID environment variables."
+        )
+        exit(1)
+
+    genres = ["Action", "Comedy", "Drama"]  # Example genres
+    data = {
+        "parent": {"type": "database_id", "database_id": database_id},
+        "properties": {
+            "Name": {
+                "type": "title",
+                "title": [{"type": "text", "text": {"content": "Example Movie Title"}}],
+            },
+            "Category": {
+                "type": "multi_select",
+                "multi_select": [{"name": genre} for genre in genres],
+            },
+        },
+    }
+
+    _ = get_existing_notion_movies(api_key, database_id)
+
+    put_movie_into_notion(data, api_key)
