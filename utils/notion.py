@@ -97,6 +97,7 @@ if __name__ == "__main__":
                 "type": "title",
                 "title": [{"type": "text", "text": {"content": "Example Movie Title"}}],
             },
+            "Type": {"type": "select", "select": {"name": "Movie"}},
             "Category": {
                 "type": "multi_select",
                 "multi_select": [{"name": genre} for genre in genres],
