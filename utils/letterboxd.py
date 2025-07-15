@@ -24,11 +24,11 @@ def get_letterboxd_watchlist(url: str) -> Tuple[List[str], List[str]]:
 
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
     except requests.RequestException as e:
         logging.error(f"Error fetching data from {url}: {e}")
-        return []
+        return [], []
 
     soup = BeautifulSoup(response.text, "html.parser")
 
