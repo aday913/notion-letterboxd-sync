@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 import logging
+from typing import List, Tuple
 
 import requests
 from bs4 import BeautifulSoup
 
 
-def get_letterboxd_watchlist(url: str) -> list:
+def get_letterboxd_watchlist(url: str) -> Tuple[List[str], List[str]]:
     """
     Fetches the watchlist from a Letterboxd user profile.
 
@@ -14,7 +15,9 @@ def get_letterboxd_watchlist(url: str) -> list:
         url (str): The URL of the Letterboxd user profile.
 
     Returns:
-        list: A list of movie titles in the watchlist.
+        Tuple[List[str], List[str]]: A tuple containing two lists:
+            - A list of movie titles in the watchlist.
+            - A list of corresponding movie slugs.
     """
     logging.info(f"Fetching watchlist from {url}")
 
@@ -27,17 +30,23 @@ def get_letterboxd_watchlist(url: str) -> list:
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    watchlist = []
+    watchlist_titles = []
+    watchlist_slugs = []
     for li in soup.find_all("li", class_="poster-container"):
         img = li.find("img")
         if img and img.has_attr("alt"):
             title = img["alt"]
-            watchlist.append(title)
+            watchlist_titles.append(title)
             logging.debug(f"  Found movie: {title}")
 
-    logging.info(f"Found {len(watchlist)} items in the watchlist.")
+        div = li.find("div", class_="linked-film-poster")
+        if div and div.has_attr("data-film-slug"):
+            slug = div["data-film-slug"]
+            watchlist_slugs.append(slug)
 
-    return watchlist
+    logging.info(f"Found {len(watchlist_titles)} items in the watchlist.")
+
+    return watchlist_titles, watchlist_slugs
 
 
 def get_services_for_movies(movies: list) -> dict:
