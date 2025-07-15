@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 
 log = logging.getLogger(__name__)
 
-def get_letterboxd_watchlist(url: str) -> Tuple[List[str], List[str]]:
+def get_letterboxd_watchlist(url: str) -> dict:
     """
     Fetches the watchlist from a Letterboxd user profile. 
 
@@ -28,27 +28,29 @@ def get_letterboxd_watchlist(url: str) -> Tuple[List[str], List[str]]:
         response.raise_for_status()
     except requests.RequestException as e:
         logging.error(f"Error fetching data from {url}: {e}")
-        return [], []
+        return {}
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    watchlist_titles = []
-    watchlist_slugs = []
+    watchlist = {}
     for li in soup.find_all("li", class_="poster-container"):
-        img = li.find("img")
-        if img and img.has_attr("alt"):
-            title = img["alt"]
-            watchlist_titles.append(title)
-            logging.debug(f"  Found movie: {title}")
 
         div = li.find("div", class_="linked-film-poster")
         if div and div.has_attr("data-film-slug"):
             slug = div["data-film-slug"]
-            watchlist_slugs.append(slug)
+            watchlist[slug] = {}
+        else:
+            continue
 
-    logging.info(f"Found {len(watchlist_titles)} items in the watchlist.")
+        img = li.find("img")
+        if img and img.has_attr("alt"):
+            title = img["alt"]
+            watchlist[slug]["title"] = title
+            logging.debug(f"  Found movie: {title}")
 
-    return watchlist_titles, watchlist_slugs
+    logging.info(f"Found {len(watchlist)} items in the watchlist.")
+
+    return watchlist
 
 
 def get_genres_for_movies(movies: list) -> dict:
@@ -92,8 +94,8 @@ def get_genres_for_movies(movies: list) -> dict:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    titles, slugs = get_letterboxd_watchlist("https://letterboxd.com/aday913/watchlist/")
+    titles = get_letterboxd_watchlist("https://letterboxd.com/aday913/watchlist/")
     print("Watchlist Titles:", titles)
 
-    genres = get_genres_for_movies(['thor-love-and-thunder'])
-    print("Genres for Movies:", genres)
+    # genres = get_genres_for_movies(['thor-love-and-thunder'])
+    # print("Genres for Movies:", genres)
