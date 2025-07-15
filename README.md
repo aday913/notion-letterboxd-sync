@@ -37,10 +37,10 @@ If you prefer to run the script in a Docker container, you can skip the installa
 
 ## Environment Variables
 
-- NOTION_API_KEY: Your Notion integration secret key.
-- NOTION_DATABASE_ID: The ID of the target Notion database.
-- LETTERBOXD_USER: Your Letterboxd username.
-- DEBUG (optional): Set to "true" to enable debug logging ("false" by default).
+- `NOTION_API_KEY`: Your Notion integration secret key.
+- `NOTION_DATABASE_ID`: The ID of the target Notion database.
+- `LETTERBOXD_USER`: Your Letterboxd username.
+- `DEBUG` (optional): Set to "true" to enable debug logging ("false" by default).
 
 ## Usage
 
