@@ -53,43 +53,39 @@ def get_letterboxd_watchlist(url: str) -> dict:
     return watchlist
 
 
-def get_genres_for_movies(movies: list) -> dict:
+def get_genres_for_movie(movie: str) -> list:
     """
-    Fetches genres for a list of movies from Letterboxd.
+    Fetches genres for a movie from Letterboxd.
 
     Args:
-        movies (list): A list of movie titles.
+        movies (string): A single movie slug.
 
     Returns:
         dict: A dictionary mapping movie titles to their genres.
     """
-    movie_genres = {}
-    for movie in movies:
-        url = f"https://letterboxd.com/film/{movie}/"
-        logging.debug(f"Fetching genres for movie: {movie} from {url}")
+    url = f"https://letterboxd.com/film/{movie}/"
+    logging.debug(f"Fetching genres for movie: {movie} from {url}")
 
-        try:
-            headers = {"User-Agent": "Mozilla/5.0"}
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-        except requests.RequestException as e:
-            logging.error(f"Error fetching data for movie {movie}: {e}")
-            continue
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logging.error(f"Error fetching data for movie {movie}: {e}")
+        return None
 
-        soup = BeautifulSoup(response.text, "html.parser")
+    soup = BeautifulSoup(response.text, "html.parser")
 
-        genres = []
-        for h3 in soup.find_all("h3"):
-            if h3.get_text(strip=True).lower() == "genres":
-                genre_div = h3.find_next_sibling("div", class_="text-sluglist")
-                if genre_div:
-                    for a in genre_div.find_all("a", class_="text-slug"):
-                        genres.append(a.get_text(strip=True))
-                break
+    genres = []
+    for h3 in soup.find_all("h3"):
+        if h3.get_text(strip=True).lower() == "genres":
+            genre_div = h3.find_next_sibling("div", class_="text-sluglist")
+            if genre_div:
+                for a in genre_div.find_all("a", class_="text-slug"):
+                    genres.append(a.get_text(strip=True))
+            break
 
-        movie_genres[movie] = genres
-
-    return movie_genres
+    return genres
 
 
 if __name__ == "__main__":
