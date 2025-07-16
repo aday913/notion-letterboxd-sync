@@ -2,6 +2,7 @@
 
 import logging
 import os
+import time
 
 from utils.letterboxd import get_letterboxd_watchlist, get_genres_for_movie
 from utils.notion import get_existing_notion_movies, put_movie_into_notion
@@ -26,6 +27,7 @@ def main(api_key: str, database_id: str, letterboxd_user: str):
             if genre not in all_genres:
                 all_genres.append(genre)
         logging.debug(f"Movie: {movie['title']}, Genres: {movie['genres']}")
+        time.sleep(3)  # Respectful delay to avoid rate limiting
     logging.info(f"Found unique genres: {all_genres}")
 
     # Generate title:slug mapping for Notion comparison
