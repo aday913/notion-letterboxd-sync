@@ -23,6 +23,7 @@ COPY . .
 
 # Install playwright
 RUN playwright install
+RUN playwright install-deps
 
 # Run the application
 CMD ["python", "main.py"]
