@@ -55,8 +55,10 @@ def main(api_key: str, database_id: str, letterboxd_user: str):
             continue
 
         slug = title_slug_mapping[movie]
+        if not watchlist.get(slug):
+            continue
         logging.debug(
-            f"Movie '{movie}' already exists in Notion, removing from watchlist."
+            f"Movie '{movie}' already exists in Notion, removing from watchlist with slug {slug}."
         )
         del watchlist[slug]
 
