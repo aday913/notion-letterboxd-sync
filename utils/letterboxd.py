@@ -98,6 +98,44 @@ def get_genres_for_movie(movie: str) -> list:
     return genres
 
 
+def get_services_for_movie(movie: str) -> list:
+    url = f"https://letterboxd.com/film/{movie}/"
+    logging.debug(f"Fetching services for movie: {movie} from {url}")
+
+    streaming_services = []
+    with sync_playwright() as p:
+        logging.debug("Launching Playwright browser...")
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        try:
+            page.goto(url, wait_until="load")
+            time.sleep(5)  # Wait for the page to load completely
+
+            logging.debug(f"Fetching content from {url} with BeautifulSoup")
+            soup = BeautifulSoup(page.content(), "html.parser")
+
+            for p_tag in soup.find_all("p", class_="service"):
+                service_tag = p_tag.find("span", class_="name")
+                if not service_tag:
+                    continue
+
+                service_name = service_tag.get_text(strip=True)
+
+                for a_tag in p_tag.find_all("a"):
+                    span = a_tag.find("span", class_="extended")
+                    if span and span.get_text(strip=True).lower() == "play":
+                        if service_name not in streaming_services:
+                            logging.debug(f"Found streaming service: {service_name}")
+                            streaming_services.append(service_name)
+        except Exception as e:
+            logging.error(f"Error fetching streaming services for movie {movie}: {e}")
+        finally:
+            browser.close()
+    logging.info(f"Found {len(streaming_services)} streaming services for movie {movie}: {streaming_services}.")
+    return streaming_services
+
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
@@ -108,4 +146,22 @@ if __name__ == "__main__":
 
     titles = get_letterboxd_watchlist(f"https://letterboxd.com/{letterboxd_username}/watchlist/")
 
-    genres = get_genres_for_movie("thor-love-and-thunder")
+    all_services = set()
+    all_genres = set()
+    for slug, data in titles.items():
+        logging.info(f"Movie: {data.get('title', 'Unknown')} (Slug: {slug})")
+        genres = get_genres_for_movie(slug)
+        services = get_services_for_movie(slug)
+        if services:
+            logging.info(f"  Streaming services: {', '.join(services)}")
+            for service in services:
+                all_services.add(service)
+    logging.info(f"Total number of movies processed: {len(titles)}")
+    for slug, data in titles.items():
+        logging.info(f"  - {data.get('title', 'Unknown')} (Slug: {slug})")
+    logging.info(f"Total unique streaming services found: {len(all_services)}") 
+    for service in all_services:
+        logging.info(f"  - {service}")
+    logging.info(f"Total unique genres found: {len(all_genres)}")
+    for genre in all_genres:
+        logging.info(f"  - {genre}")
