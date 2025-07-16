@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 
 import logging
-from typing import List, Tuple
+import os
+import time
 
 import requests
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 log = logging.getLogger(__name__)
 
+
 def get_letterboxd_watchlist(url: str) -> dict:
     """
-    Fetches the watchlist from a Letterboxd user profile. 
+    Fetches the watchlist from a Letterboxd user profile.
 
     Args:
         url (str): The URL of the Letterboxd user profile.
@@ -33,6 +36,9 @@ def get_letterboxd_watchlist(url: str) -> dict:
     soup = BeautifulSoup(response.text, "html.parser")
 
     watchlist = {}
+    logging.debug(
+        f"BeautifulSoup has found {len(soup.find_all('li', class_='poster-container'))} items in the watchlist."
+    )
     for li in soup.find_all("li", class_="poster-container"):
 
         div = li.find("div", class_="linked-film-poster")
@@ -40,13 +46,16 @@ def get_letterboxd_watchlist(url: str) -> dict:
             slug = div["data-film-slug"]
             watchlist[slug] = {}
         else:
+            logging.warning("  No film slug found in the poster container.")
             continue
 
-        img = li.find("img")
-        if img and img.has_attr("alt"):
-            title = img["alt"]
-            watchlist[slug]["title"] = title
-            logging.debug(f"  Found movie: {title}")
+        if div and div.has_attr("data-film-name"):
+            name = div["data-film-name"]
+            watchlist[slug]["title"] = name
+            logging.debug(f"  Found movie slug: {slug} with name: {name}")
+        else:
+            logging.warning(f"  No film name found for slug {slug}.")
+            continue
 
     logging.info(f"Found {len(watchlist)} items in the watchlist.")
 
@@ -90,8 +99,8 @@ def get_genres_for_movie(movie: str) -> list:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    titles = get_letterboxd_watchlist("https://letterboxd.com/aday913/watchlist/")
-    print("Watchlist Titles:", titles)
 
-    # genres = get_genres_for_movies(['thor-love-and-thunder'])
-    # print("Genres for Movies:", genres)
+    letterboxd_username = os.getenv("LETTERBOXD_USERNAME")
+    titles = get_letterboxd_watchlist(f"https://letterboxd.com/{letterboxd_username}/watchlist/")
+
+    genres = get_genres_for_movie('thor-love-and-thunder')
