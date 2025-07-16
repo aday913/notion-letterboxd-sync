@@ -4,7 +4,11 @@ import logging
 import os
 import time
 
-from utils.letterboxd import get_letterboxd_watchlist, get_genres_for_movie
+from utils.letterboxd import (
+    get_letterboxd_watchlist,
+    get_genres_for_movie,
+    get_services_for_movie,
+)
 from utils.notion import get_existing_notion_movies, put_movie_into_notion
 
 
@@ -21,14 +25,22 @@ def main(api_key: str, database_id: str, letterboxd_user: str):
     # Fetch genres for each movie in the watchlist
     logging.info("Fetching genres for movies in the watchlist...")
     all_genres = []
+    all_services = []
     for slug, movie in watchlist.items():
         movie["genres"] = get_genres_for_movie(slug)
+        movie["services"] = get_services_for_movie(slug)
         for genre in movie["genres"]:
             if genre not in all_genres:
                 all_genres.append(genre)
-        logging.debug(f"Movie: {movie['title']}, Genres: {movie['genres']}")
+        for service in movie["services"]:
+            if service not in all_services:
+                all_services.append(service)
+        logging.debug(
+            f"Movie: {movie['title']}, Genres: {movie['genres']}, Services: {movie['services']}"
+        )
         time.sleep(3)  # Respectful delay to avoid rate limiting
     logging.info(f"Found unique genres: {all_genres}")
+    logging.info(f"Found unique streaming services: {all_services}")
 
     # Generate title:slug mapping for Notion comparison
     title_slug_mapping = {movie["title"]: slug for slug, movie in watchlist.items()}
@@ -62,13 +74,36 @@ def main(api_key: str, database_id: str, letterboxd_user: str):
         data = {
             "parent": {"type": "database_id", "database_id": database_id},
             "properties": {
-                "Name": {"type": "title", "title": [{"type": "text", "text": {"content": title}}]},
+                "Name": {
+                    "type": "title",
+                    "title": [{"type": "text", "text": {"content": title}}],
+                },
                 "Type": {"type": "select", "select": {"name": "Movie"}},
-                "Category": {"type": "multi_select", "multi_select": [{"name": genre} for genre in genres]},
+                "Category": {
+                    "type": "multi_select",
+                    "multi_select": [{"name": genre} for genre in genres],
+                },
             },
         }
 
-        logging.info(f"Adding movie '{title}' to Notion with genres {genres}...")
+        logging.info(f"  Adding movie '{title}' to Notion with genres {genres}...")
+
+        # AVAILABLE SERVICES PERSONALLY
+        available_services = ["Hulu", "Netflix", "Disney Plus", "HBO Max", "Apple TV+"]
+        services = [
+            service
+            for service in watchlist[movie_slug]["services"]
+            if service in available_services
+        ]
+        if services:
+            logging.info(
+                f"    Adding streaming services {services} for movie '{title}' to Notion."
+            )
+            data["properties"]["Source"] = {
+                "type": "multi_select",
+                "multi_select": [{"name": service} for service in services],
+            }
+
         put_movie_into_notion(data, api_key)
 
 
