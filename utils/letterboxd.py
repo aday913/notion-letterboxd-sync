@@ -12,50 +12,51 @@ log = logging.getLogger(__name__)
 
 
 def get_letterboxd_watchlist(url: str) -> dict:
-    """
-    Fetches the watchlist from a Letterboxd user profile.
-
-    Args:
-        url (str): The URL of the Letterboxd user profile.
-
-    Returns:
-        Tuple[List[str], List[str]]: A tuple containing two lists:
-            - A list of movie titles in the watchlist.
-            - A list of corresponding movie slugs.
-    """
-    logging.info(f"Fetching watchlist from {url}")
-
-    try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        logging.error(f"Error fetching data from {url}: {e}")
-        return {}
-
-    soup = BeautifulSoup(response.text, "html.parser")
-
     watchlist = {}
-    logging.debug(
-        f"BeautifulSoup has found {len(soup.find_all('li', class_='poster-container'))} items in the watchlist."
-    )
-    for li in soup.find_all("li", class_="poster-container"):
 
-        div = li.find("div", class_="linked-film-poster")
-        if div and div.has_attr("data-film-slug"):
-            slug = div["data-film-slug"]
-            watchlist[slug] = {}
-        else:
-            logging.warning("  No film slug found in the poster container.")
-            continue
+    page = 1
+    has_content = True
+    while has_content:
+        time.sleep(5)
+        try:
+            headers = {"User-Agent": "Mozilla/5.0"}
+            target_url = f"{url}page/{page}" if page > 1 else url
+            logging.debug(f"Fetching watchlist from: {target_url}")
+            response = requests.get(target_url, headers=headers)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            logging.error(f"Error fetching data from {url}: {e}")
+            return {}
 
-        if div and div.has_attr("data-film-name"):
-            name = div["data-film-name"]
-            watchlist[slug]["title"] = name
-            logging.debug(f"  Found movie slug: {slug} with name: {name}")
-        else:
-            logging.warning(f"  No film name found for slug {slug}.")
-            continue
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        if len(soup.find_all("li", class_="poster-container")) == 0:
+            logging.info("No more content found in the watchlist.")
+            has_content = False
+            break
+
+        for li in soup.find_all("li", class_="poster-container"):
+
+            div = li.find("div", class_="linked-film-poster")
+            if div and div.has_attr("data-film-slug"):
+                slug = div["data-film-slug"]
+                logging.debug(f"  Found film slug: {slug}")
+                watchlist[slug] = {}
+            else:
+                logging.warning("  No film slug found in the poster container.")
+                has_content = False
+                continue
+
+            img = li.find("img")
+            if img and img.has_attr("alt"):
+                title = img["alt"]
+                watchlist[slug]["title"] = title
+            else:
+                logging.warning("  No title found in the poster image.")
+                has_content = False
+                continue
+        
+        page += 1
 
     logging.info(f"Found {len(watchlist)} items in the watchlist.")
 
@@ -101,6 +102,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     letterboxd_username = os.getenv("LETTERBOXD_USERNAME")
+    if not letterboxd_username:
+        logging.error("Please set the LETTERBOXD_USERNAME environment variable.")
+        exit(1)
+
     titles = get_letterboxd_watchlist(f"https://letterboxd.com/{letterboxd_username}/watchlist/")
 
-    genres = get_genres_for_movie('thor-love-and-thunder')
+    genres = get_genres_for_movie("thor-love-and-thunder")
