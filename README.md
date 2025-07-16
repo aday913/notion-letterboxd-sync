@@ -2,6 +2,9 @@
 
 A terminal application to sync your Letterboxd watchlist with a Notion database.
 
+## Future Plans:
+- Use playwright to get streaming services for each movie.
+
 ## Features
 
 - Scrapes your Letterboxd watchlist.
